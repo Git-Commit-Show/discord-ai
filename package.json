@@ -1,7 +1,7 @@
 {
-  "name": "discord-intro-bot",
-  "version": "1.0.0",
-  "description": "Discord Introduction Bot powered by ResilientLLM",
+  "name": "discord-ai",
+  "version": "1.1.0",
+  "description": "AI-powered Discord bot powered by ResilientLLM",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -11,15 +11,18 @@
   },
   "keywords": [
     "discord",
+    "discord-ai",
     "discord-bot",
     "resilient-llm",
     "openrouter",
-    "nodejs",
     "ai",
-    "llm"
+    "llm",
+    "spam-filter",
+    "community-moderation",
+    "moderation"
   ],
-  "author": "Shankar",
-  "license": "ISC",
+  "author": "Git-Commit-Show",
+  "license": "Apache-2.0",
   "dependencies": {
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
