@@ -13,25 +13,42 @@ Behavior details: `REQUIREMENTS.md`. Architecture: `DESIGN.md`.
 
 ## 1. Discord application setup
 
-1. Open [Discord Developer Portal](https://discord.com/developers/applications) → create or select an application.
-2. Open **Bot** → create the bot if needed → copy the token (`DISCORD_TOKEN`).
-3. Under **Privileged Gateway Intents**, enable:
-   - **Message Content Intent** (required for reading message text)
-   - **Server Members Intent** (required for join events and role cleanup)
-4. Open **OAuth2 → URL Generator**:
-   - **Scopes:** `bot`
-   - **Bot permissions:**
-     - View Channels
-     - Send Messages
-     - Read Message History
-     - Embed Links
-     - Manage Messages (spam deletion)
-     - Manage Roles (new-member assign/cleanup)
-5. Open the generated URL, invite the bot to your server.
+High-trust bot (Manage Messages / Roles) — keep it **private** and least-privilege.
 
-### Role hierarchy
+### 1.1 Bot page
 
-If you use `NEW_MEMBER_ROLE_ID`, the bot’s highest role must sit **above** that role in Server Settings → Roles, or Discord will reject role changes.
+1. [Developer Portal](https://discord.com/developers/applications) → create/select app → **Bot**.
+2. Copy **Token** into `DISCORD_TOKEN` (not Public Key / Client Secret).
+3. Intents on: **Message Content**, **Server Members**; **Presence** off.
+4. **Public Bot** off; **Requires OAuth2 Code Grant** off.
+
+### 1.2 Installation (do this before Public Bot will stay off)
+
+1. Open **Installation**.
+2. Contexts: **Guild Install** on; **User Install** off.
+3. **Install Link** → **None** (other options block private).
+4. **OAuth2** → Default Authorization Link → **None** (if shown).
+5. Save → **Bot** → Public Bot **Off** → Save.
+6. Verified apps usually cannot go private again — stay unverified for internal use.
+7. Invite via URL Generator below (owner/team only when private).
+
+### 1.3 OAuth2 URL Generator (invite permissions live here, not on Bot)
+
+1. **OAuth2 → URL Generator**.
+2. Scopes: **`bot` only** (`applications.commands` later if you add slash commands).
+3. **Bot Permissions** appear on this same page after checking `bot`:
+   - View Channels, Send Messages, Read Message History, Embed Links
+   - Manage Messages (spam delete)
+   - Manage Roles (only if using `NEW_MEMBER_ROLE_ID`)
+4. Do not grant Administrator / Kick / Ban / Manage Server / Manage Channels.
+5. Copy URL → open → pick server → Authorize; keep the URL private.
+6. Token leak → reset on Bot page immediately.
+7. No new-member role → omit Manage Roles and Server Members Intent.
+
+### 1.4 Server role hierarchy
+
+1. Bot role above `NEW_MEMBER_ROLE_ID`; below mod/admin roles.
+2. Optional: restrict channels via overrides (spam needs read + Manage Messages).
 
 ## 2. Collect Discord IDs
 
@@ -133,8 +150,11 @@ Keep Node at v18+ on the host. Pin or lock dependencies via `package-lock.json` 
 
 ## 6. Post-deploy checklist
 
+- [ ] Installation: Guild Install only; Install Link = None (if keeping private)
+- [ ] Public Bot off (when not verified / after Install Link is None)
+- [ ] Privileged intents enabled (Message Content + Server Members as needed)
+- [ ] Invited via URL Generator with `bot` scope and least-privilege Bot Permissions (not Administrator)
 - [ ] Bot appears online in the server member list
-- [ ] Privileged intents enabled (Message Content + Server Members)
 - [ ] Bot can see and speak in the introductions channel
 - [ ] Post a test intro in `INTRO_CHANNEL_ID` → personalized welcome with one question
 - [ ] Post obvious spam in another channel → message deleted + warn (needs Manage Messages)
@@ -153,12 +173,14 @@ Keep Node at v18+ on the host. Pin or lock dependencies via `package-lock.json` 
 
 | Symptom | Likely cause |
 | ------- | ------------ |
+| Cannot turn Public Bot off | Install Link or OAuth2 Default Authorization Link not **None**; or app is verified |
 | Bot offline / login fails | Bad or missing `DISCORD_TOKEN` |
 | No reactions to messages | Message Content Intent disabled, or bot lacks channel access |
 | No role on join / cleanup does nothing | Missing `NEW_MEMBER_ROLE_ID`, Server Members Intent off, or bot role below target role |
-| Spam not deleted | Missing Manage Messages permission |
+| Spam not deleted | Missing Manage Messages (re-invite with that permission on URL Generator) |
 | Welcome never fires | Wrong `INTRO_CHANNEL_ID`, or message filtered (reply / greeting / already welcomed) |
 | LLM errors in logs | Bad `OPENROUTER_API_KEY`, invalid `MODEL`, or provider outage |
+| “Missing Permissions” on role changes | Bot role below target role, or Manage Roles not granted at invite |
 
 ---
 

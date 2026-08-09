@@ -24,4 +24,10 @@ export default {
     roleCleanupIntervalHours: Number(
         process.env.ROLE_CLEANUP_INTERVAL_HOURS || 24
     ),
+
+    // REST list page size (Discord max 1000)
+    paginationSize: Math.min(
+        1000,
+        Math.max(1, Number(process.env.PAGINATION_SIZE || 1000))
+    ),
 }; 
