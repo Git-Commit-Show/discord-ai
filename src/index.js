@@ -2,6 +2,7 @@ import { client } from "./bot.js";
 import config from "./config.js";
 
 import { handleIntroduction } from "./handlers/introductionHandler.js";
+import { handleNewMemberJoin } from "./handlers/newMemberRoleHandler.js";
 import { handleSpam } from "./handlers/spamHandler.js";
 import { removeNewMemberRole } from "./jobs/removeNewMemberRole.js";
 
@@ -17,6 +18,10 @@ client.once("clientReady", async () => {
         await removeNewMemberRole(client);
     }, config.roleCleanupIntervalHours * 60 * 60 * 1000);
 
+});
+
+client.on("guildMemberAdd", async (member) => {
+    await handleNewMemberJoin(member);
 });
 
 client.on("messageCreate", async (message) => {

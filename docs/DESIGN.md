@@ -107,8 +107,8 @@ Message received
 ### Membership role lifecycle
 
 - Discord remains the source of truth for who holds the new-member role.
+- On `guildMemberAdd`, assign the configured new-member role when `NEW_MEMBER_ROLE_ID` is set and the role exists in the guild; skip otherwise.
 - A scheduled job scans guild members with that role and removes it once join age ≥ configured days.
-- Role **assignment** on join is planned; cleanup already assumes the role may exist.
 
 ## AI usage model
 
@@ -166,7 +166,7 @@ Three distinct LLM tasks share one provider client:
 | Keyword spam filter    | Insert before AI spam call; short-circuit on hit                       |
 | Mod notifications      | Side effect after SPAM (and optionally REJECT); target from config     |
 | Persistent memory      | Swap in-memory community store for DB without changing pipeline order  |
-| Auto role on join      | New `guildMemberAdd` path that assigns new-member role                 |
+| Auto role on join      | Done: `guildMemberAdd` assigns role when configured and present        |
 | Slash / admin commands | Separate command ingress; mutate config or memory via privileged users |
 | Analytics              | Emit pipeline outcomes to a metrics sink; dashboard reads the sink     |
 
