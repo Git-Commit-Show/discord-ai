@@ -1,8 +1,10 @@
 import { expect } from "chai";
+import { PermissionFlagsBits } from "discord.js";
 import sinon from "sinon";
 
 import { handleIntroduction } from "../../src/handlers/introductionHandler.js";
 import { handleSpam } from "../../src/handlers/spamHandler.js";
+import { shouldSkipAdminMessage } from "../../src/middleware/adminMessageGate.js";
 import {
     finishMessageProcessing,
     startMessageProcessing,
@@ -10,6 +12,7 @@ import {
 } from "../../src/middleware/inFlightMessageTracker.js";
 
 export const INTRO_CHANNEL_ID = "intro-channel";
+export const BOT_USER_ID = "bot-user";
 
 let messageSeq = 0;
 
@@ -20,9 +23,14 @@ export function createMessage({
     username = "User",
     channelId = INTRO_CHANNEL_ID,
     bot = false,
-    reference = null
+    reference = null,
+    admin = false,
+    mentionBot = false,
+    guildOwnerId = "owner-1"
 } = {}) {
     messageSeq += 1;
+
+    const mentionedUserIds = new Set(mentionBot ? [BOT_USER_ID] : []);
 
     return {
         id: `msg-${messageSeq}`,
@@ -34,6 +42,26 @@ export function createMessage({
             toString() {
                 return `<@${userId}>`;
             }
+        },
+        member: {
+            permissions: {
+                has(flag) {
+                    return admin && flag === PermissionFlagsBits.Administrator;
+                }
+            }
+        },
+        mentions: {
+            users: {
+                has(id) {
+                    return mentionedUserIds.has(id);
+                }
+            }
+        },
+        client: {
+            user: { id: BOT_USER_ID }
+        },
+        guild: {
+            ownerId: guildOwnerId
         },
         channel: {
             id: channelId,
@@ -48,6 +76,10 @@ export function createMessage({
 
 /** Runs the same spam-then-intro order as src/index.js. */
 export async function processMessage(message) {
+    if (shouldSkipAdminMessage(message)) {
+        return;
+    }
+
     startMessageProcessing(message.id);
 
     try {

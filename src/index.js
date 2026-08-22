@@ -5,6 +5,7 @@ import { handleIntroduction } from "./handlers/introductionHandler.js";
 import { handleNewMemberJoin } from "./handlers/newMemberRoleHandler.js";
 import { handleSpam } from "./handlers/spamHandler.js";
 import { removeNewMemberRole } from "./jobs/removeNewMemberRole.js";
+import { shouldSkipAdminMessage } from "./middleware/adminMessageGate.js";
 import {
     finishMessageProcessing,
     markMessageDeleted,
@@ -36,6 +37,11 @@ client.on("messageCreate", async (message) => {
     console.log("Author:", message.author.username);
     console.log("Channel:", message.channel.id);
     console.log("Content:", message.content);
+
+    if (shouldSkipAdminMessage(message)) {
+        console.log("Admin message skipped; bot was not tagged");
+        return;
+    }
 
     startMessageProcessing(message.id);
 

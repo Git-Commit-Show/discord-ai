@@ -11,6 +11,7 @@ Discord intro + moderation bot (Discord.js, ResilientLLM / OpenRouter).
 - Duplicate intro detection (in-memory Jaccard)
 - Welcome tracking (in-memory; one welcome per user; follow-ups stay silent)
 - Ignore bots, replies, and short greetings
+- Do not process admin messages unless the bot is specifically tagged
 - AI spam detect → delete message + channel warn
 - Skip intro replies when the message is deleted while processing (including Discord unknown-message errors)
 - Fail-open spam (`SAFE`) and intro moderation (`APPROVE`) on LLM error or empty output, with `[LLM_FAIL_OPEN]` logs
@@ -22,7 +23,7 @@ Discord intro + moderation bot (Discord.js, ResilientLLM / OpenRouter).
 ## In progress / planned
 
 - Wire keyword blacklist spam filter (`spamFilter.js` unused)
-- Spam / mod notifications (`NOTIFICATION_MODE`, `NOTIFICATION_TARGET_ID` in env only)
+- Report moderation activity in a channel, with a clickable link to the message the action was taken on (`NOTIFICATION_MODE`, `NOTIFICATION_TARGET_ID` in env only)
 - Persistent storage for welcomes + duplicate intros
 - Slash commands
 - Admin configuration commands

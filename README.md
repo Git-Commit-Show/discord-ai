@@ -2,14 +2,14 @@
 
 An AI-powered Discord bot for community onboarding and safety. It welcomes genuine introductions in a dedicated channel, filters spam in every channel, and can assign a temporary new-member role on join.
 
-Spam checks run first. Introduction handling runs only in the configured channel, and only if the message was not treated as spam. After the first successful welcome, later top-level messages from that user stay quiet. If an intro is deleted while the bot is still working, it does not reply.
+Untagged admin and guild-owner messages are left unchanged. For everyone else, spam checks run first. Introduction handling runs only in the configured channel, and only if the message was not treated as spam. After the first successful welcome, later top-level messages from that user stay quiet. If an intro is deleted while the bot is still working, it does not reply.
 
 ## Features
 
 - Personalized AI welcome with one conversation-starting question
 - Intro validation (length and keywords) and AI content moderation
 - Duplicate introduction detection and one welcome per user (in-memory)
-- Ignores bots, replies, and short greetings
+- Ignores bots, replies, short greetings, and untagged admin messages
 - AI spam detect: delete the message and warn in-channel
 - Skip intro replies when the source message is deleted mid-processing
 - Optional new-member role on join, with periodic age-out

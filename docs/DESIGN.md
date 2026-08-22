@@ -50,7 +50,7 @@ Discord Gateway
 Layers (conceptual, not folder layout):
 
 1. **Runtime bootstrap** - load config, connect to Discord, register event listeners and scheduled jobs.
-2. **Message ingress** - receive `messageCreate`; track the message while it is in flight; honor `messageDelete` / `messageDeleteBulk` so a gone intro does not get a reply.
+2. **Message ingress** - receive `messageCreate`; skip untagged admin and guild-owner posts; track remaining messages while in flight; honor `messageDelete` / `messageDeleteBulk` so a gone intro does not get a reply.
 3. **Safety pipeline** - classify and act on spam before any onboarding logic.
 4. **Onboarding pipeline** - validate, moderate, and welcome introductions in the configured channel only.
 5. **AI service** - shared LLM client with retries/backoff; task-specific prompts for welcome, intro moderation, and spam detection.
@@ -62,7 +62,13 @@ Layers (conceptual, not folder layout):
 Every non-bot message follows this order:
 
 ```
-Message received (start in-flight tracking)
+Message received
+      │
+      ▼
+ Admin post without a direct @bot mention ──▶ ignore (leave as-is)
+      │
+      ▼
+ Start in-flight tracking
       │
       ▼
  Spam detection (AI; keyword rules planned as a fast path)
@@ -86,7 +92,7 @@ Message received (start in-flight tracking)
                            then record welcome + intro fingerprint
 ```
 
-**Ordering rationale:** spam can appear in any channel, so safety runs globally first. Onboarding is channel-scoped and must not run after a spam action. Delete tracking exists so a user or moderator removing an intro does not still get a bot reply.
+**Ordering rationale:** untagged admin and guild-owner posts leave the pipeline before any AI work so staff chatter is never deleted or welcomed. Spam can appear in any other channel, so safety runs globally next. Onboarding is channel-scoped and must not run after a spam action. Delete tracking exists so a user or moderator removing an intro does not still get a bot reply.
 
 ## Pipelines
 
