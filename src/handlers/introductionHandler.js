@@ -51,11 +51,8 @@ export async function handleIntroduction(message) {
 
         console.log("Correct Channel");
 
-        // Already welcomed
+        // Already welcomed: skip without a canned reply so follow-ups stay quiet
         if (hasBeenWelcomed(message.author.id)) {
-            await message.reply(
-                "👋 You've already introduced yourself. Welcome again!"
-            );
             return;
         }
 
