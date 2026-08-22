@@ -44,4 +44,9 @@ export function saveIntroduction(message) {
 
     introductions.push(message);
 
-} 
+}
+
+/** Clears saved intro fingerprints so tests start from an empty process. */
+export function resetIntroductions() {
+    introductions.length = 0;
+}

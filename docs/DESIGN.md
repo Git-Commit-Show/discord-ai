@@ -174,6 +174,6 @@ Three distinct LLM tasks share one provider client:
 ## Non-goals (current design)
 
 - General-purpose chat agent outside intro + safety.
-- Replacing Discord’s native permission/moderation stack.
+- Replacing Discord's native permission/moderation stack.
 - Guaranteed durable state before a persistence store is adopted.
 

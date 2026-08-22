@@ -11,7 +11,8 @@ import {
 
 import { introductionSystemPrompt } from "../prompts/introductionPrompt.js";
 
-const llm = new ResilientLLM({
+/** Shared LLM client; exported so unit tests can stub chat without live API calls. */
+export const llm = new ResilientLLM({
     aiService: config.aiService,
     model: config.model || DEFAULT_MODEL,
     apiKey: config.openRouterApiKey,
@@ -20,6 +21,29 @@ const llm = new ResilientLLM({
     retries: 3,
     backoffFactor: 2
 });
+
+/** Reads trimmed text from an LLM chat response; empty when the model returns nothing. */
+function getResponseText(response) {
+    const content = response?.content;
+    return typeof content === "string" ? content.trim() : "";
+}
+
+/** Logs spam/moderation fail-open so empty or failed LLM replies can be counted in production. */
+function logUnprocessedClassification({ check, reason, fallback, response, error, userMessage }) {
+    const content = response?.content;
+    console.warn("[LLM_FAIL_OPEN]", {
+        check,
+        reason,
+        fallback,
+        contentType: content === null ? "null" : typeof content,
+        error: error?.message || null,
+        messageLength: typeof userMessage === "string" ? userMessage.length : 0
+    });
+
+    if (error) {
+        console.error(error);
+    }
+}
 
 
 // ==========================================
@@ -40,8 +64,13 @@ export async function generateIntroductionReply(userMessage) {
     ];
 
     const response = await llm.chat(conversation);
+    const text = getResponseText(response);
 
-    return response.content.trim();
+    if (!text) {
+        throw new Error("Empty response from LLM");
+    }
+
+    return text;
 }
 
 
@@ -105,10 +134,18 @@ Do not add any extra words.
     try {
 
         const response = await llm.chat(conversation);
+        const result = getResponseText(response).toUpperCase();
 
-        const result = response.content
-            .trim()
-            .toUpperCase();
+        if (!result) {
+            logUnprocessedClassification({
+                check: "moderation",
+                reason: "empty_response",
+                fallback: "APPROVE",
+                response,
+                userMessage
+            });
+            return "APPROVE";
+        }
 
         console.log("🛡️ Moderation Result:", result);
 
@@ -120,9 +157,13 @@ Do not add any extra words.
 
     } catch (error) {
 
-        console.error("Moderation Error:", error);
-
-        // Fail open so genuine users are not blocked
+        logUnprocessedClassification({
+            check: "moderation",
+            reason: "error",
+            fallback: "APPROVE",
+            error,
+            userMessage
+        });
         return "APPROVE";
     }
 } 
@@ -146,10 +187,18 @@ export async function detectSpam(userMessage) {
     try {
 
         const response = await llm.chat(conversation);
+        const result = getResponseText(response).toUpperCase();
 
-        const result = response.content
-            .trim()
-            .toUpperCase();
+        if (!result) {
+            logUnprocessedClassification({
+                check: "spam",
+                reason: "empty_response",
+                fallback: "SAFE",
+                response,
+                userMessage
+            });
+            return "SAFE";
+        }
 
         console.log("🚨 Spam Detection:", result);
 
@@ -161,9 +210,20 @@ export async function detectSpam(userMessage) {
 
     } catch (error) {
 
-        console.error("Spam Detection Error:", error);
-
-        // Fail open so normal conversations are not blocked
+        logUnprocessedClassification({
+            check: "spam",
+            reason: "error",
+            fallback: "SAFE",
+            error,
+            userMessage
+        });
         return "SAFE";
     }
 }
+
+/** Handler-facing LLM calls so tests can stub them without hitting live APIs. */
+export const llmApi = {
+    generateIntroductionReply,
+    moderateIntroduction,
+    detectSpam
+};

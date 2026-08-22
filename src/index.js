@@ -5,6 +5,12 @@ import { handleIntroduction } from "./handlers/introductionHandler.js";
 import { handleNewMemberJoin } from "./handlers/newMemberRoleHandler.js";
 import { handleSpam } from "./handlers/spamHandler.js";
 import { removeNewMemberRole } from "./jobs/removeNewMemberRole.js";
+import {
+    finishMessageProcessing,
+    markMessageDeleted,
+    startMessageProcessing,
+    wasMessageDeleted
+} from "./middleware/inFlightMessageTracker.js";
 
 client.once("clientReady", async () => {
 
@@ -31,16 +37,39 @@ client.on("messageCreate", async (message) => {
     console.log("Channel:", message.channel.id);
     console.log("Content:", message.content);
 
-    // AI Spam Detection
-    const spam = await handleSpam(message);
+    startMessageProcessing(message.id);
 
-    if (spam) {
-        return;
+    try {
+
+        // AI Spam Detection
+        const spam = await handleSpam(message);
+
+        if (spam) {
+            return;
+        }
+
+        if (wasMessageDeleted(message.id)) {
+            console.log("Introduction skipped; message was deleted");
+            return;
+        }
+
+        // Introduction Handler
+        await handleIntroduction(message);
+
+    } finally {
+        finishMessageProcessing(message.id);
     }
 
-    // Introduction Handler
-    await handleIntroduction(message);
+});
 
+client.on("messageDelete", (message) => {
+    markMessageDeleted(message.id);
+});
+
+client.on("messageDeleteBulk", (messages) => {
+    for (const deleted of messages.values()) {
+        markMessageDeleted(deleted.id);
+    }
 });
 
 client.login(config.discordToken);      

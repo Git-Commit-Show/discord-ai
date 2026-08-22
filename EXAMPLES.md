@@ -114,7 +114,7 @@ The intro moderator returns REJECT. The public message is always the same, wheth
 
 > Hi I'm looking for long term partner.
 
-> I’ve been working on a niche I genuinely believe in, and I’m looking for one person who’s just as serious about building something…
+> I've been working on a niche I genuinely believe in, and I'm looking for one person who's just as serious about building something…
 
 > how are you?
 

@@ -1,4 +1,4 @@
-import { detectSpam } from "../services/llmService.js";
+import { llmApi } from "../services/llmService.js";
 
 export async function handleSpam(message) {
 
@@ -12,7 +12,7 @@ export async function handleSpam(message) {
 
         console.log(`🔍 Checking message from ${message.author.username}`);
 
-        const result = await detectSpam(message.content);
+        const result = await llmApi.detectSpam(message.content);
 
         if (result === "SAFE") {
             console.log("✅ Message is SAFE");
