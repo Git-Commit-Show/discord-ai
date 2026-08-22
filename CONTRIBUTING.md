@@ -64,7 +64,7 @@ Entry: `src/index.js` wires Discord events. Everything else hangs off that.
 
 ```
 src/
-├── index.js                 # Bootstrap: login, messageCreate, guildMemberAdd, role job
+├── index.js                 # Bootstrap: login, messageCreate, messageDelete, guildMemberAdd, role job
 ├── bot.js                   # Discord.js client + gateway intents
 ├── config.js                # Loads .env → typed config object
 ├── constants.js             # Defaults (model, tokens, timeouts)
@@ -76,6 +76,7 @@ src/
 │   ├── introductionValidator.js
 │   ├── welcomeTracker.js    # In-memory “already welcomed”
 │   ├── duplicateDetector.js # Jaccard similarity vs recent intros
+│   ├── inFlightMessageTracker.js  # Skip reply if the intro is deleted mid-pipeline
 │   └── spamFilter.js        # Keyword filter (planned; not wired yet)
 ├── services/
 │   └── llmService.js        # ResilientLLM client: welcome, moderate, spam
@@ -105,21 +106,24 @@ test/
 Order matters (see Design). In `src/index.js`:
 
 1. **`handleSpam`** - every non-bot message; if spam, delete/warn and **stop**.
-2. **`handleIntroduction`** - only continues for non-spam; channel-scoped onboarding.
+2. If the message was deleted while spam ran, **stop** (no intro).
+3. **`handleIntroduction`** - only continues for non-spam; channel-scoped onboarding.
 
 Introduction pipeline (inside the handler), roughly:
 
 1. Ignore bots, replies, short greetings  
 2. Require `INTRO_CHANNEL_ID`  
-3. Already welcomed? → short ack  
+3. Already welcomed? → silence  
 4. AI moderate (`APPROVE` / `REJECT`)  
 5. Heuristic validation (length / keywords)  
 6. Near-duplicate check  
-7. AI welcome reply → record welcome + intro fingerprint  
+7. If the intro is gone, skip the reply  
+8. AI welcome reply → record welcome + intro fingerprint  
 
 Join / roles:
 
 - `guildMemberAdd` → `newMemberRoleHandler`  
+- `messageDelete` / `messageDeleteBulk` → mark in-flight message deleted  
 - Startup + interval → `removeNewMemberRole` job  
 
 ### Where to change what
@@ -133,6 +137,7 @@ Join / roles:
 | Spam actions (delete, warn, future mod notify) | `src/handlers/spamHandler.js` |
 | Intro structure rules | `src/middleware/introductionValidator.js` |
 | Duplicate similarity | `src/middleware/duplicateDetector.js` |
+| Skip reply after delete | `src/middleware/inFlightMessageTracker.js`, `src/index.js`, intro handler |
 | LLM retries, model, API | `src/services/llmService.js`, `src/config.js`, `src/constants.js` |
 | Role assign / cleanup | `handlers/newMemberRoleHandler.js`, `jobs/removeNewMemberRole.js` |
 | Wire keyword spam prefilter | `middleware/spamFilter.js` + call from spam handler / `index.js` |
@@ -141,7 +146,7 @@ Join / roles:
 
 From [`docs/DESIGN.md`](docs/DESIGN.md):
 
-- **Fail open on AI errors** - if classification fails, do not block the user (see spam handler `catch`).
+- **Fail open on AI errors** - if classification fails or returns empty text, do not block the user (see `[LLM_FAIL_OPEN]` in `llmService.js`).
 - **Cheap filters before expensive AI** - heuristics first when you add new checks.
 - **Single-purpose pipelines** - keep spam and intro separate; spam always runs first.
 - **Config over code** - new knobs go in `.env` / `config.js`, not hard-coded IDs.
@@ -168,7 +173,7 @@ From [`docs/DESIGN.md`](docs/DESIGN.md):
 | Unit / integration | `npm test` | Mocha tests under `test/` with no live third-party APIs. Production logs print by default; pass `--silent` to hide them (`npm test --silent`). |
 | E2E | `npm run test:e2e` | Live LLM checks (`*.e2e.test.js`) |
 
-Keep each suite small (about three cases: one happy path, two edge/error paths). Files that call live services must be named `*.e2e.test.js`. CI is expected to run `npm test` only.
+Keep each suite small (about three cases: one happy path, two edge/error paths). Files that call live services must be named `*.e2e.test.js`. CI (`.github/workflows/test.yml`) runs `npm test` on pull requests, pushes to `main`, and manual workflow dispatch. It does not run e2e.
 
 ## Good first issues
 

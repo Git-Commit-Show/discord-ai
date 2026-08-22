@@ -12,7 +12,7 @@ A Discord community bot that improves onboarding and safety:
 
 ## Principles
 
-- **Fail open on AI errors.** If moderation or spam classification fails, prefer not blocking legitimate users.
+- **Fail open on AI errors.** If moderation or spam classification fails or returns empty text, prefer not blocking legitimate users. Log `[LLM_FAIL_OPEN]` so empty replies can be counted. Empty welcome text is an error, not a silent success.
 - **Cheap filters before expensive AI.** Heuristics (channel, greetings, length, keywords, similarity) run before LLM calls where practical.
 - **Single-purpose pipelines.** Spam handling and introduction handling are separate concerns with a defined order.
 - **Config over code.** Channel IDs, roles, AI provider/model, and notification targets come from environment configuration.
@@ -31,6 +31,7 @@ Discord Gateway
 └────────┬────────┘     └──────────────────┘
          │
          ├── Community memory (welcomed users, intro fingerprints)
+         ├── In-flight messages (deleted-while-processing flags)
          └── Guild role store (Discord as source of truth for roles)
 ```
 
@@ -49,7 +50,7 @@ Discord Gateway
 Layers (conceptual, not folder layout):
 
 1. **Runtime bootstrap** - load config, connect to Discord, register event listeners and scheduled jobs.
-2. **Message ingress** - receive `messageCreate` events; ignore bot authors early.
+2. **Message ingress** - receive `messageCreate`; track the message while it is in flight; honor `messageDelete` / `messageDeleteBulk` so a gone intro does not get a reply.
 3. **Safety pipeline** - classify and act on spam before any onboarding logic.
 4. **Onboarding pipeline** - validate, moderate, and welcome introductions in the configured channel only.
 5. **AI service** - shared LLM client with retries/backoff; task-specific prompts for welcome, intro moderation, and spam detection.
@@ -61,7 +62,7 @@ Layers (conceptual, not folder layout):
 Every non-bot message follows this order:
 
 ```
-Message received
+Message received (start in-flight tracking)
       │
       ▼
  Spam detection (AI; keyword rules planned as a fast path)
@@ -70,11 +71,14 @@ Message received
       │
       └─ SAFE
             │
+            ├─ intro deleted while in flight ──▶ skip (no reply)
+            │
             ▼
      Introduction pipeline
             │
             ├─ wrong channel / reply / greeting ──▶ ignore
-            ├─ already welcomed ──▶ short acknowledgment
+            ├─ already welcomed ──▶ silence
+            ├─ intro deleted ──▶ skip (no welcome, no apology)
             ├─ AI moderation REJECT ──▶ refuse with reason
             ├─ heuristic validation fail ──▶ coach required fields
             ├─ near-duplicate intro ──▶ warn similarity
@@ -82,7 +86,7 @@ Message received
                            then record welcome + intro fingerprint
 ```
 
-**Ordering rationale:** spam can appear in any channel, so safety runs globally first. Onboarding is channel-scoped and must not run after a spam action.
+**Ordering rationale:** spam can appear in any channel, so safety runs globally first. Onboarding is channel-scoped and must not run after a spam action. Delete tracking exists so a user or moderator removing an intro does not still get a bot reply.
 
 ## Pipelines
 
@@ -98,11 +102,12 @@ Message received
 - **Scope:** configured introductions channel only.
 - **Noise rejection:** ignore replies and trivial greetings so the channel stays introduction-focused.
 - **Quality gates (in order):**
-  1. One welcome per user (community memory).
+  1. One welcome per user (community memory). Already-welcomed authors get no canned ack.
   2. AI content moderation (abuse, promo, scams, invites, etc.) → `APPROVE` / `REJECT`.
   3. Heuristic structure check (minimum substance; signals of a real intro).
   4. Near-duplicate detection against recent intros (similarity threshold).
-- **Success path:** personalized welcome (3–5 sentences) ending in exactly one conversation-starting question; then update community memory.
+- **Deleted source:** if the intro disappears before a reply is sent, skip. Discord unknown-message errors (the referenced message is gone) are treated the same way.
+- **Success path:** personalized welcome (3 to 5 sentences) ending in exactly one conversation-starting question; then update community memory.
 
 ### Membership role lifecycle
 
@@ -124,6 +129,8 @@ Three distinct LLM tasks share one provider client:
 
 **Client traits:** configurable service/model/API key; token and temperature caps; retries with exponential backoff.
 
+**Empty or failed classifiers:** spam falls back to `SAFE`, moderation to `APPROVE`, both logged as `[LLM_FAIL_OPEN]`. Empty welcome generation throws so the intro handler can send the generic error (unless the source message is already gone).
+
 **Prompt policy:** task prompts are owned as product logic (tone, reject criteria, spam criteria). Binary classifiers must return a single label so parsing stays reliable.
 
 ## State and persistence
@@ -133,6 +140,7 @@ Three distinct LLM tasks share one provider client:
 | ---------------------------------------- | --------------------- | ----------------------------------- |
 | Welcomed user IDs                        | Process memory        | Durable store (survive restarts)    |
 | Intro fingerprints / text for similarity | Process memory        | Durable store + retention policy    |
+| In-flight deleted flags                  | Process memory        | Unchanged (per-message, short-lived)|
 | Role membership                          | Discord               | Unchanged                           |
 | Bot config                               | Environment variables | Env + optional admin commands later |
 
@@ -154,7 +162,7 @@ Three distinct LLM tasks share one provider client:
 ## Cross-cutting concerns
 
 - **Intents / permissions:** message content, send/delete messages, manage roles for cleanup, read member join times as needed.
-- **Observability:** structured console logging per pipeline stage is enough for v1; metrics/dashboard are future.
+- **Observability:** console logs per pipeline stage plus `[LLM_FAIL_OPEN]` for empty or failed classifiers; metrics/dashboard are future.
 - **Multi-guild:** role cleanup iterates all connected guilds; intro channel is a single configured ID (one primary guild / channel assumed unless config expands).
 - **Cost control:** global AI spam checks are the dominant cost driver; heuristic prefilters and channel scoping for onboarding limit spend.
 
