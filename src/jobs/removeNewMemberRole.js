@@ -108,7 +108,7 @@ async function cleanupGuild(guild) {
                 `❌ Failed to remove role from ${member.user.tag}:`,
                 err.message
             );
-            // Hierarchy/permission issues hit everyone the same way — stop flooding logs.
+            // Hierarchy/permission issues hit everyone the same way - stop flooding logs.
             if (err.message === "Missing Permissions") {
                 console.error(
                     `⏭ Aborting further cleanup in ${guild.name}: Missing Permissions (fix bot role order / Manage Roles).`

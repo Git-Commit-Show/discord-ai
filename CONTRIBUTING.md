@@ -48,10 +48,10 @@ npm run dev
 
 Or without reload: `npm start`.
 
-4. Optional LLM smoke check (uses the same `.env`):
+4. Optional live LLM check (uses the same `.env`):
 
 ```bash
-npm test
+npm run test:e2e
 ```
 
 You should see `Logged in as …` in the console. Then post in your intro channel and watch the stage logs (`MESSAGE RECEIVED` → spam check → introduction pipeline).
@@ -86,15 +86,26 @@ src/
 │   └── removeNewMemberRole.js  # Periodic age-out of new-member role
 ├── utils/
 │   └── logger.js
-└── testLLM.js               # Manual OpenRouter connectivity check
+
+test/
+├── 01-spam.test.js                # Spam delete / warn, then stop
+├── 02-intro-gates.test.js         # Ignore, validate, moderate, duplicate
+├── 03-welcome-and-errors.test.js  # First welcome, follow-up silence, error
+├── deletedIntroduction.test.js    # Skip reply when the intro is gone
+├── introductionValidator.test.js  # Unit: heuristic intro validation
+├── llmService.test.js             # Unit: spam classifier fail-open
+├── llmService.e2e.test.js         # Live OpenRouter welcome check
+└── helpers/
+    ├── messagePipeline.js         # Shared fake Discord message + pipeline
+    └── silenceConsole.js          # Hide production console.log during tests
 ```
 
 ### How a message is handled
 
 Order matters (see Design). In `src/index.js`:
 
-1. **`handleSpam`** — every non-bot message; if spam, delete/warn and **stop**.
-2. **`handleIntroduction`** — only continues for non-spam; channel-scoped onboarding.
+1. **`handleSpam`** - every non-bot message; if spam, delete/warn and **stop**.
+2. **`handleIntroduction`** - only continues for non-spam; channel-scoped onboarding.
 
 Introduction pipeline (inside the handler), roughly:
 
@@ -130,11 +141,11 @@ Join / roles:
 
 From [`docs/DESIGN.md`](docs/DESIGN.md):
 
-- **Fail open on AI errors** — if classification fails, do not block the user (see spam handler `catch`).
-- **Cheap filters before expensive AI** — heuristics first when you add new checks.
-- **Single-purpose pipelines** — keep spam and intro separate; spam always runs first.
-- **Config over code** — new knobs go in `.env` / `config.js`, not hard-coded IDs.
-- **In-memory community state today** — welcome + duplicate stores reset on restart; design new persistence behind the same middleware APIs.
+- **Fail open on AI errors** - if classification fails, do not block the user (see spam handler `catch`).
+- **Cheap filters before expensive AI** - heuristics first when you add new checks.
+- **Single-purpose pipelines** - keep spam and intro separate; spam always runs first.
+- **Config over code** - new knobs go in `.env` / `config.js`, not hard-coded IDs.
+- **In-memory community state today** - welcome + duplicate stores reset on restart; design new persistence behind the same middleware APIs.
 
 ## Development workflow
 
@@ -154,9 +165,10 @@ From [`docs/DESIGN.md`](docs/DESIGN.md):
 | ------ | ------- | --- |
 | Start | `npm start` | Production-style run |
 | Dev | `npm run dev` | Nodemon reload |
-| LLM test | `npm test` | OpenRouter smoke test (`src/testLLM.js`) |
+| Unit / integration | `npm test` | Mocha tests under `test/` with no live third-party APIs. Production logs print by default; pass `--silent` to hide them (`npm test --silent`). |
+| E2E | `npm run test:e2e` | Live LLM checks (`*.e2e.test.js`) |
 
-There is no automated unit-test suite yet. Manual Discord checks + `npm test` for the LLM path are the current bar. If you add tests, keep the suite small (about three cases: one happy path, two edge/error paths).
+Keep each suite small (about three cases: one happy path, two edge/error paths). Files that call live services must be named `*.e2e.test.js`. CI is expected to run `npm test` only.
 
 ## Good first issues
 

@@ -13,7 +13,7 @@ Behavior details: `REQUIREMENTS.md`. Architecture: `DESIGN.md`.
 
 ## 1. Discord application setup
 
-High-trust bot (Manage Messages / Roles) — keep it **private** and least-privilege.
+High-trust bot (Manage Messages / Roles) - keep it **private** and least-privilege.
 
 ### 1.1 Bot page
 
@@ -29,7 +29,7 @@ High-trust bot (Manage Messages / Roles) — keep it **private** and least-privi
 3. **Install Link** → **None** (other options block private).
 4. **OAuth2** → Default Authorization Link → **None** (if shown).
 5. Save → **Bot** → Public Bot **Off** → Save.
-6. Verified apps usually cannot go private again — stay unverified for internal use.
+6. Verified apps usually cannot go private again - stay unverified for internal use.
 7. Invite via URL Generator below (owner/team only when private).
 
 ### 1.3 OAuth2 URL Generator (invite permissions live here, not on Bot)
@@ -88,7 +88,7 @@ Omit `NEW_MEMBER_ROLE_ID` to skip join assignment and role cleanup.
 
 | Variable | Notes |
 | -------- | ----- |
-| `NOTIFICATION_MODE` | `dm` or `channel` — spam/mod alerts |
+| `NOTIFICATION_MODE` | `dm` or `channel` - spam/mod alerts |
 | `NOTIFICATION_TARGET_ID` | User or channel ID for those alerts |
 
 Full comments and examples live in `.env.example`.
@@ -116,10 +116,10 @@ On success you should see a log like `Logged in as <bot>#NNNN`. The role cleanup
 ### LLM smoke check
 
 ```bash
-npm test
+npm run test:e2e
 ```
 
-Runs `src/testLLM.js` against the configured OpenRouter model (uses the same env vars).
+Runs the live OpenRouter welcome check in `test/llmService.e2e.test.js` (uses the same env vars). Offline unit and integration tests are `npm test`.
 
 ## 5. Production hosting
 
@@ -144,7 +144,7 @@ Keep Node at v18+ on the host. Pin or lock dependencies via `package-lock.json` 
 
 ### Secrets
 
-- Store `DISCORD_TOKEN` and `OPENROUTER_API_KEY` only in the host’s secret store or `.env` (gitignored).
+- Store `DISCORD_TOKEN` and `OPENROUTER_API_KEY` only in the host's secret store or `.env` (gitignored).
 - Rotate tokens in the Developer Portal / OpenRouter if they leak.
 - Prefer least-privilege Discord permissions; do not invite with Administrator unless you intend to.
 
