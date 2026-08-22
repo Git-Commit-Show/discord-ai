@@ -121,6 +121,16 @@ npm run test:e2e
 
 Runs the live OpenRouter welcome check in `test/llmService.e2e.test.js` (uses the same env vars). Offline unit and integration tests are `npm test`.
 
+### CI
+
+`.github/workflows/test.yml` runs `npm ci` then `npm test` on:
+
+- pull requests
+- pushes to `main` (including merges)
+- manual **Run workflow** (`workflow_dispatch`)
+
+CI uses Node 24. Local development stays Node v18+. Live e2e is not part of CI.
+
 ## 5. Production hosting
 
 The bot is a **long-running Node process** connected to the Discord Gateway. It must stay online continuously; serverless request handlers are not a fit.
@@ -165,7 +175,7 @@ Keep Node at v18+ on the host. Pin or lock dependencies via `package-lock.json` 
 
 - **In-memory state:** welcomed users and intro fingerprints live in process memory. Restarts can re-welcome users or miss duplicate history until persistence is added (see `DESIGN.md`).
 - **Cost:** every eligible message can trigger an LLM spam check; choose a cost-appropriate `MODEL` and monitor OpenRouter usage.
-- **Fail-open AI:** if moderation/spam classification fails, the bot prefers not blocking users (`DESIGN.md`).
+- **Fail-open AI:** if moderation/spam classification fails or returns empty text, the bot prefers not blocking users (`DESIGN.md`). Empty welcome generation is treated as an error.
 - **Multi-guild:** role cleanup walks connected guilds; intro channel is a single configured ID (one primary channel assumed).
 
 ## 8. Troubleshooting

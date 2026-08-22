@@ -20,6 +20,7 @@ The examples below are fictional stand-ins for real server patterns. Reply text 
 | Intro text is too similar to someone else's | "Looks very similar to another introduction" | Block copy-paste intros |
 | Spam model says spam | Deletes the message and warns in-channel | Remove spam |
 | Exact greeting, a reply, or an already-welcomed user | Silence | Ignore noise |
+| Intro deleted while the bot is still processing | Silence | Avoid a reply to a gone message |
 | Handler crashes | "Sorry! Something went wrong." | Error fallback |
 
 ---
@@ -186,6 +187,7 @@ Bot stays silent when:
 - The message is a reply to another message (including Bot)
 - The author already received a successful welcome in this bot process
 - The channel is not the configured intro channel (spam check still runs)
+- The introduction was deleted (by the user, a mod, or another bot) before the reply went out, or Discord rejected the reply because the referenced message is gone
 
 **User** (reply to Bot)
 
@@ -201,7 +203,7 @@ Bot stays silent when:
 
 ## 9. Something went wrong
 
-If welcome generation or another intro step throws, Bot replies with a generic error. This can appear next to a spam warning if two messages are processed close together.
+If welcome generation or another intro step throws, Bot replies with a generic error. This can appear next to a spam warning if two messages are processed close together. If the intro was already deleted, Bot does not send this apology.
 
 **Bot**
 

@@ -1,168 +1,62 @@
-# Discord Introduction Bot
+# Discord AI
 
-An AI-powered Discord bot that automatically welcomes new members in the introductions channel. The bot validates introductions, generates personalized AI welcome messages with a conversation starter, tracks previously welcomed users, and detects duplicate introductions to improve community onboarding.
+An AI-powered Discord bot for community onboarding and safety. It welcomes genuine introductions in a dedicated channel, filters spam in every channel, and can assign a temporary new-member role on join.
 
----
+Spam checks run first. Introduction handling runs only in the configured channel, and only if the message was not treated as spam. After the first successful welcome, later top-level messages from that user stay quiet. If an intro is deleted while the bot is still working, it does not reply.
 
 ## Features
 
-- 🤖 AI-powered personalized welcome messages
-- 💬 AI-generated conversation starter
-- ✅ Introduction validation
-- 🔍 Duplicate introduction detection
-- 👋 Welcome tracking (prevents multiple introductions from the same user)
-- 🚫 Ignores greetings and replies that are not introductions
-- ⚡ Built using Discord.js and ResilientLLM
+- Personalized AI welcome with one conversation-starting question
+- Intro validation (length and keywords) and AI content moderation
+- Duplicate introduction detection and one welcome per user (in-memory)
+- Ignores bots, replies, and short greetings
+- AI spam detect: delete the message and warn in-channel
+- Skip intro replies when the source message is deleted mid-processing
+- Optional new-member role on join, with periodic age-out
+- Fail-open spam and moderation when the LLM errors or returns empty output
 
----
+## Quick start
 
-# Setup Instructions
-
-## Prerequisites
-
-- Node.js (v18 or later)
-- A Discord account
-- A Discord server where you have Administrator permissions
-- An OpenRouter API Key
-
----
-
-## Installation
-
-Clone the repository:
+Node.js **v18+**. Full Discord portal, intents, and permissions: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ```bash
-git clone https://github.com/prasad218/discord-intro-bot.git
-cd discord-intro-bot
-```
-
-Install dependencies:
-
-```bash
+git clone https://github.com/Git-Commit-Show/discord-ai.git
+cd discord-ai
 npm install
+cp .env.example .env
 ```
 
-Create a `.env` file in the project root:
-
-```env
-DISCORD_TOKEN=YOUR_DISCORD_BOT_TOKEN
-INTRO_CHANNEL_ID=YOUR_INTRODUCTIONS_CHANNEL_ID
-
-OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
-
-AI_SERVICE=openrouter
-MODEL=deepseek/deepseek-chat-v3-0324:free
-```
-
-Run the bot in development mode:
+Fill at least `DISCORD_TOKEN`, `INTRO_CHANNEL_ID`, `OPENROUTER_API_KEY`, `AI_SERVICE`, and `MODEL`. Then:
 
 ```bash
 npm run dev
 ```
 
-Or run normally:
+Or `npm start` without auto-reload.
+
+## Tests
 
 ```bash
-npm start
+npm test          # Offline unit and integration tests (what CI runs)
+npm run test:e2e  # Live OpenRouter check; needs a real API key
 ```
 
----
+GitHub Actions (`.github/workflows/test.yml`) runs `npm test` on pull requests, pushes to `main`, and manual workflow dispatch.
 
-# Discord Bot Configuration
+## Docs
 
-1. Go to the Discord Developer Portal:
-   https://discord.com/developers/applications
+| Doc | Contents |
+| --- | -------- |
+| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | What is built vs planned |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Architecture and message flow |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Discord app, env, hosting |
+| [`EXAMPLES.md`](EXAMPLES.md) | What the bot says (and when it stays silent) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Local setup, codebase map, PR bar |
 
-2. Create a new Discord Application.
+## Tech stack
 
-3. Navigate to **Bot**.
+Node.js, Discord.js, ResilientLLM, OpenRouter.
 
-4. Click **Add Bot**.
+## License
 
-5. Copy the Bot Token and add it to the `.env` file.
-
-6. Under **Privileged Gateway Intents**, enable:
-
-- Message Content Intent
-
----
-
-# Required OAuth2 Settings
-
-Navigate to **OAuth2 → URL Generator**
-
-### Scopes
-
-- bot
-
-### Bot Permissions
-
-- View Channels
-- Send Messages
-- Read Message History
-- Embed Links
-
-Generate the invite URL and add the bot to your Discord server.
-
----
-
-# Discord Channel Setup
-
-Create an introduction channel (for example):
-
-```
-#introductions
-```
-
-Enable **Developer Mode** in Discord.
-
-Right-click the introductions channel and select **Copy Channel ID**.
-
-Add the channel ID to the `.env` file:
-
-```env
-INTRO_CHANNEL_ID=YOUR_CHANNEL_ID
-```
-
----
-
-# Project Workflow
-
-1. User posts an introduction in the introductions channel.
-2. Bot validates whether the message is a proper introduction.
-3. Duplicate introductions are detected and rejected.
-4. Previously welcomed users are identified.
-5. The bot generates a personalized AI welcome message.
-6. The AI ends the welcome with a conversation-starting question.
-
----
-
-# Current Features
-
-- AI-powered welcome messages
-- Personalized conversation starters
-- Introduction validation
-- Duplicate introduction detection
-- Welcome tracking
-- Reply filtering
-- Greeting filtering
-
----
-
-# Future Improvements
-
-- AI content moderation
-- Automatic role assignment
-- Persistent database for user tracking
-- Slash commands
-- Analytics dashboard
-- Admin configuration commands
-
----
-
-# Tech Stack
-
-- Node.js
-- Discord.js
-- ResilientLLM
-- OpenRouter API
+Apache-2.0.
