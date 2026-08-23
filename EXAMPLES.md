@@ -1,6 +1,6 @@
 # What to expect from the bot
 
-Bot watches every message. Spam is checked first, in every channel. Introduction handling runs only in the introductions channel, and only if the message was not treated as spam.
+Bot watches every message except untagged admin and guild-owner posts, which are left unchanged unless they @mention the bot. Spam is checked first, in every channel. Introduction handling runs only in the introductions channel, and only if the message was not treated as spam.
 
 Bot does **not** chat, answer questions, or moderate off-topic talk as a general assistant. After the first successful welcome, later top-level messages from that user are ignored. Replies to other messages are ignored too.
 
@@ -20,6 +20,7 @@ The examples below are fictional stand-ins for real server patterns. Reply text 
 | Intro text is too similar to someone else's | "Looks very similar to another introduction" | Block copy-paste intros |
 | Spam model says spam | Deletes the message and warns in-channel | Remove spam |
 | Exact greeting, a reply, or an already-welcomed user | Silence | Ignore noise |
+| Admin or guild owner posts without @bot | Silence | Leave staff messages alone |
 | Intro deleted while the bot is still processing | Silence | Avoid a reply to a gone message |
 | Handler crashes | "Sorry! Something went wrong." | Error fallback |
 

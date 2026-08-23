@@ -77,6 +77,7 @@ src/
 │   ├── welcomeTracker.js    # In-memory “already welcomed”
 │   ├── duplicateDetector.js # Jaccard similarity vs recent intros
 │   ├── inFlightMessageTracker.js  # Skip reply if the intro is deleted mid-pipeline
+│   ├── adminMessageGate.js  # Skip untagged admin / guild-owner posts
 │   └── spamFilter.js        # Keyword filter (planned; not wired yet)
 ├── services/
 │   └── llmService.js        # ResilientLLM client: welcome, moderate, spam
@@ -92,6 +93,7 @@ test/
 ├── 01-spam.test.js                # Spam delete / warn, then stop
 ├── 02-intro-gates.test.js         # Ignore, validate, moderate, duplicate
 ├── 03-welcome-and-errors.test.js  # First welcome, follow-up silence, error
+├── 04-admin-messages.test.js      # Skip untagged admin posts; process when tagged
 ├── deletedIntroduction.test.js    # Skip reply when the intro is gone
 ├── introductionValidator.test.js  # Unit: heuristic intro validation
 ├── llmService.test.js             # Unit: spam classifier fail-open
@@ -105,9 +107,10 @@ test/
 
 Order matters (see Design). In `src/index.js`:
 
-1. **`handleSpam`** - every non-bot message; if spam, delete/warn and **stop**.
-2. If the message was deleted while spam ran, **stop** (no intro).
-3. **`handleIntroduction`** - only continues for non-spam; channel-scoped onboarding.
+1. **Admin gate** - guild owners and Administrator members are skipped unless they @mention the bot.
+2. **`handleSpam`** - every remaining non-bot message; if spam, delete/warn and **stop**.
+3. If the message was deleted while spam ran, **stop** (no intro).
+4. **`handleIntroduction`** - only continues for non-spam; channel-scoped onboarding.
 
 Introduction pipeline (inside the handler), roughly:
 
@@ -138,6 +141,7 @@ Join / roles:
 | Intro structure rules | `src/middleware/introductionValidator.js` |
 | Duplicate similarity | `src/middleware/duplicateDetector.js` |
 | Skip reply after delete | `src/middleware/inFlightMessageTracker.js`, `src/index.js`, intro handler |
+| Skip untagged admin posts | `src/middleware/adminMessageGate.js`, `src/index.js` |
 | LLM retries, model, API | `src/services/llmService.js`, `src/config.js`, `src/constants.js` |
 | Role assign / cleanup | `handlers/newMemberRoleHandler.js`, `jobs/removeNewMemberRole.js` |
 | Wire keyword spam prefilter | `middleware/spamFilter.js` + call from spam handler / `index.js` |
@@ -148,7 +152,7 @@ From [`docs/DESIGN.md`](docs/DESIGN.md):
 
 - **Fail open on AI errors** - if classification fails or returns empty text, do not block the user (see `[LLM_FAIL_OPEN]` in `llmService.js`).
 - **Cheap filters before expensive AI** - heuristics first when you add new checks.
-- **Single-purpose pipelines** - keep spam and intro separate; spam always runs first.
+- **Single-purpose pipelines** - keep spam and intro separate; admin gate, then spam, then intro.
 - **Config over code** - new knobs go in `.env` / `config.js`, not hard-coded IDs.
 - **In-memory community state today** - welcome + duplicate stores reset on restart; design new persistence behind the same middleware APIs.
 
