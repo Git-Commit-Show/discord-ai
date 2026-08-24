@@ -1,4 +1,29 @@
 import { llmApi } from "../services/llmService.js";
+import { wasMessageDeleted } from "../middleware/inFlightMessageTracker.js";
+
+/** True when Discord says the message is already gone (code 10008). */
+function isUnknownMessage(error) {
+    return error?.code === 10008;
+}
+
+/** Removes a spam message if it is still present; ignores Unknown Message races. */
+async function deleteSpamMessage(message) {
+    if (wasMessageDeleted(message.id)) {
+        console.log("Spam message already deleted");
+        return;
+    }
+
+    try {
+        await message.delete();
+    } catch (error) {
+        if (isUnknownMessage(error)) {
+            console.log("Spam message already deleted");
+            return;
+        }
+
+        throw error;
+    }
+}
 
 export async function handleSpam(message) {
 
@@ -21,8 +46,7 @@ export async function handleSpam(message) {
 
         console.log("🚫 Spam Detected!");
 
-        // Delete spam message
-        await message.delete();
+        await deleteSpamMessage(message);
 
         // Warn the user
         await message.channel.send(
@@ -38,4 +62,4 @@ export async function handleSpam(message) {
         // Don't block the bot if spam detection fails
         return false;
     }
-}      
+}
